@@ -11,3 +11,8 @@ Thumbs.db
 # Cache de Python
 __pycache__/
 *.pyc
+
+# Credenciales locales y llaves criptográficas (Seguridad)
+*.pem
+*.key
+.oci/
