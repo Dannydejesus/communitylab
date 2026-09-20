@@ -1,1 +1,11 @@
-# Librerías iniciales del proyecto (se añadirán en la Semana 0 [14-20 Septiembre 2026]).
+langchain>=0.1.13
+langgraph>=0.0.30
+langchain-openai>=0.1.0
+langchain-google-genai>=1.0.0
+langchain-anthropic>=0.1.4
+langchain-cohere>=0.1.0
+cohere>=5.0.0
+pydantic>=2.6.4
+python-dotenv>=1.0.1
+pytest>=8.0.0
+pytest-mock>=3.12.0
