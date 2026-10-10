@@ -29,7 +29,6 @@ from src.agentes.modelos import (
     PublicacionLinkedIn,
     SugerenciaPreguntasFrecuentes,
 )
-from src.agentes.observabilidad import config_ejecucion
 from src.agentes.prompts.boletin import prompt_boletin
 from src.agentes.prompts.caso_exito import prompt_caso_exito
 from src.agentes.prompts.insight_mejora import prompt_insight_mejora
