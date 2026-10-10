@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from collections.abc import Callable
 from typing import Any
 
+from src.agentes.observabilidad import obtener_contexto_llamada_ia
+
 from langchain_core.exceptions import OutputParserException
 
 from src.agentes.errores_ia import (
@@ -203,15 +205,18 @@ def invocar_modelo_con_fallback(
     nombre_primario = _nombre_proveedor(primario)
     nombre_respaldo = _nombre_proveedor(respaldo)
 
+    contexto_reintento = {
+        **obtener_contexto_llamada_ia(),
+        "etapa": "proveedor_primario",
+        "proveedor": nombre_primario,
+    }
+
     fallo_primario: BaseException | None = None
 
     try:
         resultado = ejecutar_con_reintentos(
             lambda _intento: primario(entrada),
-            contexto={
-                "etapa": "proveedor_primario",
-                "proveedor": nombre_primario,
-            },
+            contexto=contexto_reintento,
         )
 
         return {

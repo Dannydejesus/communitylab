@@ -16,7 +16,10 @@ from src.agentes.modelos import (
     AnalisisLote,
     AnalisisMensaje,
 )
-from src.agentes.observabilidad import registrar_evento
+from src.agentes.observabilidad import (
+    contexto_llamada_ia,
+    registrar_evento,
+)
 from src.agentes.prompts.analisis import (
     template_analisis,
     template_analisis_lote,
@@ -111,11 +114,18 @@ def _invocar_con_fallback(
 
     respaldo.__name__ = PROVEEDOR_GEMINI
 
-    salida = invocar_modelo_con_fallback(
-        entrada,
-        primario=primario,
-        respaldo=respaldo,
-    )
+    metadata = config.get("metadata", {}) or {}
+
+    with contexto_llamada_ia(
+        id_interaccion=metadata.get("id_interaccion"),
+        ids_interaccion=metadata.get("ids_interaccion"),
+        ruta=metadata.get("ruta"),
+    ):
+        salida = invocar_modelo_con_fallback(
+            entrada,
+            primario=primario,
+            respaldo=respaldo,
+        )
 
     _registrar_traza_proveedor(
         salida["traza"],

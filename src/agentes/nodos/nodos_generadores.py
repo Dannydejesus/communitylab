@@ -18,6 +18,7 @@ from src.agentes.modelo_ia import (
 )
 from src.agentes.observabilidad import (
     config_ejecucion,
+    contexto_llamada_ia,
     registrar_evento,
 )
 
@@ -151,12 +152,15 @@ def _invocar_generador_con_fallback(
 
     respaldo.__name__ = PROVEEDOR_GEMINI
 
-    salida = invocar_modelo_con_fallback(
-        contexto,
-        primario=primario,
-        respaldo=respaldo,
-    )
-
+    with contexto_llamada_ia(
+        id_interaccion=identificador,
+        ruta=ruta,
+    ):
+        salida = invocar_modelo_con_fallback(
+            contexto,
+            primario=primario,
+            respaldo=respaldo,
+        )
     _registrar_traza_generacion(
         salida["traza"],
         identificador=identificador,

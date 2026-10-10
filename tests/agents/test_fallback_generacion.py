@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import MagicMock, patch
 
 from src.agentes.recuperacion import ids_reintentables
@@ -461,3 +462,84 @@ def test_doble_fallo_permanente_no_se_marca_para_recuperacion(
 
     generador_nvidia.invoke.assert_called_once()
     generador_gemini.invoke.assert_called_once()
+
+
+def test_retry_interno_nvidia_conserva_id_y_ruta(
+    monkeypatch,
+    caplog,
+):
+    monkeypatch.setenv(
+        "COMMUNITYLAB_PROVEEDOR_GENERACION",
+        PROVEEDOR_NVIDIA_NIM,
+    )
+
+    generador_nvidia = MagicMock()
+    generador_nvidia.invoke.side_effect = TimeoutError(
+        "timeout NVIDIA"
+    )
+
+    generador_gemini = MagicMock()
+    generador_gemini.invoke.return_value = (
+        SugerenciaPreguntasFrecuentes(
+            tema="LangGraph",
+            respuesta="Conecta los nodos mediante edges.",
+        )
+    )
+
+    def obtener_generadores(proveedor):
+        if proveedor == PROVEEDOR_NVIDIA_NIM:
+            return {
+                "preguntas_frecuentes": generador_nvidia
+            }
+
+        if proveedor == PROVEEDOR_GEMINI:
+            return {
+                "preguntas_frecuentes": generador_gemini
+            }
+
+        raise AssertionError(proveedor)
+
+    with caplog.at_level(
+        logging.WARNING,
+        logger="communitylab.ciencia_datos",
+    ), patch(
+        "src.agentes.nodos.nodos_generadores._obtener_generadores",
+        side_effect=obtener_generadores,
+    ), patch.object(
+        reintentos,
+        "_esperar",
+    ):
+        resultado = generar_activos(
+            _estado_faq()
+        )
+
+    assert resultado["fallos"] == []
+
+    eventos = [
+        registro
+        for registro in caplog.records
+        if getattr(
+            registro,
+            "evento",
+            None,
+        ) == "reintento_programado"
+    ]
+
+    assert len(eventos) == 2
+
+    for registro in eventos:
+        campos = getattr(
+            registro,
+            "campos",
+            {},
+        )
+
+        assert campos["id_interaccion"] == "fallback-gen-001"
+        assert campos["ruta"] == "preguntas_frecuentes"
+        assert campos["etapa"] == "proveedor_primario"
+        assert campos["proveedor"] == PROVEEDOR_NVIDIA_NIM
+
+    assert [
+        registro.campos["intento"]
+        for registro in eventos
+    ] == [1, 2]

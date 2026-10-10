@@ -1,3 +1,5 @@
+import logging
+
 from unittest.mock import MagicMock, patch
 
 from src.agentes.recuperacion import ids_reintentables
@@ -193,3 +195,76 @@ def test_doble_fallo_analisis_transitorio_se_marca_para_recuperacion(
 
     assert cadena_nvidia.invoke.call_count == 3
     cadena_gemini.invoke.assert_called_once()
+
+
+def test_retry_interno_nvidia_conserva_id_analisis(
+    monkeypatch,
+    caplog,
+):
+    monkeypatch.setenv(
+        "COMMUNITYLAB_PROVEEDOR_ANALISIS",
+        PROVEEDOR_NVIDIA_NIM,
+    )
+
+    cadena_nvidia = MagicMock()
+    cadena_nvidia.invoke.side_effect = TimeoutError(
+        "timeout NVIDIA"
+    )
+
+    cadena_gemini = MagicMock()
+    cadena_gemini.invoke.return_value = AnalisisMensaje(
+        sentimiento="neutral",
+        tema_principal="datos_ia",
+        subtema="conexion de nodos",
+        tipo_detectado="pregunta_tecnica",
+    )
+
+    def obtener_cadena(proveedor):
+        if proveedor == PROVEEDOR_NVIDIA_NIM:
+            return cadena_nvidia
+
+        if proveedor == PROVEEDOR_GEMINI:
+            return cadena_gemini
+
+        raise AssertionError(proveedor)
+
+    with caplog.at_level(
+        logging.WARNING,
+        logger="communitylab.ciencia_datos",
+    ), patch(
+        "src.agentes.cadenas._obtener_cadena_analisis",
+        side_effect=obtener_cadena,
+    ), patch.object(
+        reintentos,
+        "_esperar",
+    ):
+        resultado = analizar_mensaje(
+            _estado()
+        )
+
+    assert resultado.get("fallos", []) == []
+
+    eventos = [
+        registro
+        for registro in caplog.records
+        if getattr(
+            registro,
+            "evento",
+            None,
+        ) == "reintento_programado"
+    ]
+
+    assert len(eventos) == 2
+
+    for registro in eventos:
+        campos = registro.campos
+
+        assert campos["id_interaccion"] == "fallback-001"
+        assert campos["etapa"] == "proveedor_primario"
+        assert campos["proveedor"] == PROVEEDOR_NVIDIA_NIM
+        assert "ruta" not in campos
+
+    assert [
+        registro.campos["intento"]
+        for registro in eventos
+    ] == [1, 2]
