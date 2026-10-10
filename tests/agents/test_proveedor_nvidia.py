@@ -1,6 +1,13 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+
+import json
+
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.runnables import RunnableLambda
+
+from src.agentes.modelos import AnalisisMensaje
 
 from src.agentes.configuracion_ia import (
     MAX_RETRIES_CLIENTE_NVIDIA,
@@ -8,7 +15,11 @@ from src.agentes.configuracion_ia import (
     NVIDIA_BASE_URL,
     obtener_timeout_nvidia,
 )
-from src.agentes.errores_ia import ErrorConfiguracionProveedor
+from src.agentes.errores_ia import (
+    ErrorConfiguracionProveedor,
+    ErrorSalidaProveedor,
+)
+
 from src.agentes.proveedores import nvidia_nim
 
 
@@ -147,3 +158,95 @@ def test_timeout_nvidia_debe_ser_mayor_que_cero(
             match="mayor que cero",
         ):
             obtener_timeout_nvidia()
+
+
+def test_adaptador_nvidia_devuelve_cadena_y_valida_salida(
+    monkeypatch,
+):
+    respuesta = {
+        "sentimiento": "neutral",
+        "tema_principal": "datos_ia",
+        "subtema": "conexion de nodos",
+        "tipo_detectado": "pregunta_tecnica",
+    }
+
+    cliente = MagicMock()
+    cliente.bind.return_value = RunnableLambda(
+        lambda _mensajes: AIMessage(
+            content=json.dumps(respuesta)
+        )
+    )
+
+    monkeypatch.setattr(
+        nvidia_nim,
+        "obtener_modelo_nvidia",
+        lambda: cliente,
+    )
+
+    cadena = nvidia_nim.obtener_modelo_nvidia_estructurado(
+        AnalisisMensaje
+    )
+
+    assert callable(
+        getattr(cadena, "invoke", None)
+    )
+
+    resultado = cadena.invoke(
+        [
+            HumanMessage(
+                content="¿Cómo conecto nodos en LangGraph?"
+            )
+        ]
+    )
+
+    assert isinstance(
+        resultado,
+        AnalisisMensaje,
+    )
+    assert resultado.model_dump() == respuesta
+
+    cliente.bind.assert_called_once_with(
+        response_format={
+            "type": "json_object",
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "contenido",
+    [
+        "",
+        "{json roto",
+        '{"sentimiento": "otro"}',
+        "[]",
+    ],
+)
+def test_adaptador_nvidia_rechaza_salida_invalida(
+    monkeypatch,
+    contenido,
+):
+    cliente = MagicMock()
+    cliente.bind.return_value = RunnableLambda(
+        lambda _mensajes: AIMessage(
+            content=contenido
+        )
+    )
+
+    monkeypatch.setattr(
+        nvidia_nim,
+        "obtener_modelo_nvidia",
+        lambda: cliente,
+    )
+
+    cadena = nvidia_nim.obtener_modelo_nvidia_estructurado(
+        AnalisisMensaje
+    )
+
+    with pytest.raises(ErrorSalidaProveedor):
+        cadena.invoke(
+            [
+                HumanMessage(
+                    content="Mensaje válido"
+                )
+            ]
+        )

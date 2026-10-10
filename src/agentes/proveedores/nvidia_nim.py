@@ -160,3 +160,9 @@ def obtener_modelo_nvidia_estructurado(
             raise ErrorSalidaProveedor(
                 "NVIDIA NIM devolvió una salida que no cumple el esquema."
             ) from error
+
+    return (
+        RunnableLambda(preparar_entrada)
+        | modelo_json
+        | RunnableLambda(validar_respuesta)
+    )
