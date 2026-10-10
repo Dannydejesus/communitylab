@@ -1,5 +1,8 @@
 """
-Módulo para validar la conexión y subida de archivos a OCI Object Storage.
+Prueba manual de conexión y subida de archivos a OCI Object Storage.
+
+Ejecutar con ``python -m scripts.probar_oci_storage``. Requiere el SDK y un
+perfil OCI local; escribe un objeto de prueba en el bucket configurado.
 
 Consulta los metadatos del bucket y carga los objetos, manejando la
 configuración a través de variables de entorno y emitiendo errores estándar.
@@ -21,10 +24,7 @@ def get_oci_client(profile_name: str) -> tuple[ObjectStorageClient, str]:
     oci.config.validate_config(config)
 
     client = ObjectStorageClient(config)
-    respuesta_namespace = client.get_namespace()
-    if respuesta_namespace is None:
-        raise ValueError("OCI no devolvió el namespace")
-    namespace = respuesta_namespace.data
+    namespace = client.get_namespace().data
 
     return client, namespace
 
@@ -37,13 +37,10 @@ def display_bucket_info(
     """
     Consulta e imprime los metadatos del bucket para confirmar la conexión.
     """
-    respuesta_bucket = client.get_bucket(
+    bucket = client.get_bucket(
         namespace_name=namespace,
         bucket_name=bucket_name,
-    )
-    if respuesta_bucket is None:
-        raise ValueError("OCI no devolvió la respuesta del bucket")
-    bucket = respuesta_bucket.data
+    ).data
 
     print("Conexión exitosa con OCI Object Storage.")
     print(f"Bucket: {bucket.name} (Nivel: {bucket.storage_tier})")

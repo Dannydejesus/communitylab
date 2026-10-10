@@ -199,7 +199,28 @@ def generar_activos(state: EstadoAgente) -> dict:
             "fallos": fallos,
         }
 
-    contexto = _contexto(state)
+    try:
+        contexto = _contexto(state)
+    except Exception as error:
+        for ruta in rutas:
+            errores.append(
+                describir_error("generar_activos", error, ruta)
+            )
+            fallos.append(
+                construir_fallo(
+                    "generar_activos",
+                    error,
+                    id_interaccion=identificador,
+                    ruta=ruta,
+                )
+            )
+
+        return {
+            "activos_generados": activos,
+            "errores": errores,
+            "fallos": fallos,
+        }
+
     try:
         proveedor = obtener_proveedor_generacion()
 
@@ -217,6 +238,7 @@ def generar_activos(state: EstadoAgente) -> dict:
                     ruta=ruta,
                 )
             )
+
         return {
             "activos_generados": activos,
             "errores": errores,
