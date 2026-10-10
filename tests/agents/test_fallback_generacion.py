@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+from src.agentes.recuperacion import ids_reintentables
+from src.agentes.errores_ia import ErrorConfiguracionProveedor
 from src.agentes import reintentos
 from src.agentes.configuracion_ia import (
     PROVEEDOR_GEMINI,
@@ -362,6 +364,19 @@ def test_fallo_de_ambos_proveedores_no_afecta_otras_rutas(
     
     fallo = resultado["fallos"][0]
 
+    assert fallo["reintentable"] is True
+
+    assert ids_reintentables(
+        [
+            {
+                "id": "fallback-doble-fallo-001",
+                **resultado,
+            }
+        ]
+    ) == [
+        "fallback-doble-fallo-001"
+    ]
+
     assert fallo["proveedor_primario"] == PROVEEDOR_NVIDIA_NIM
     assert fallo["proveedor_respaldo"] == PROVEEDOR_GEMINI
     assert fallo["fallback_activado"] is True
@@ -382,3 +397,67 @@ def test_fallo_de_ambos_proveedores_no_afecta_otras_rutas(
         ["canal_recomendado"]
         == "LinkedIn Oficial"
     )
+
+
+def test_doble_fallo_permanente_no_se_marca_para_recuperacion(
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "COMMUNITYLAB_PROVEEDOR_GENERACION",
+        PROVEEDOR_NVIDIA_NIM,
+    )
+
+    generador_nvidia = MagicMock()
+    generador_nvidia.invoke.side_effect = (
+        ErrorConfiguracionProveedor(
+            "configuracion NVIDIA invalida"
+        )
+    )
+
+    generador_gemini = MagicMock()
+    generador_gemini.invoke.side_effect = RuntimeError(
+        "error logico Gemini"
+    )
+
+    def obtener_generadores(proveedor):
+        if proveedor == PROVEEDOR_NVIDIA_NIM:
+            return {
+                "preguntas_frecuentes": generador_nvidia
+            }
+
+        if proveedor == PROVEEDOR_GEMINI:
+            return {
+                "preguntas_frecuentes": generador_gemini
+            }
+
+        raise AssertionError(proveedor)
+
+    with patch(
+        "src.agentes.nodos.nodos_generadores._obtener_generadores",
+        side_effect=obtener_generadores,
+    ), patch.object(
+        reintentos,
+        "_esperar",
+    ):
+        resultado = generar_activos(
+            _estado_faq()
+        )
+
+    assert len(resultado["fallos"]) == 1
+
+    fallo = resultado["fallos"][0]
+
+    assert fallo["fallback_activado"] is True
+    assert fallo["reintentable"] is False
+
+    assert ids_reintentables(
+        [
+            {
+                "id": "fallback-gen-001",
+                **resultado,
+            }
+        ]
+    ) == []
+
+    generador_nvidia.invoke.assert_called_once()
+    generador_gemini.invoke.assert_called_once()

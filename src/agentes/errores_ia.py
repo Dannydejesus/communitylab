@@ -11,8 +11,14 @@ class ErrorSalidaProveedor(Exception):
 class ErrorFallbackProveedores(Exception):
     """Fallaron tanto el proveedor primario como el proveedor de respaldo."""
 
-    def __init__(self, traza: dict):
+    def __init__(
+        self,
+        traza: dict,
+        *,
+        reintentable: bool = False,
+    ):
         super().__init__(
             "Fallaron el proveedor primario y el proveedor de respaldo."
         )
         self.traza = traza
+        self.reintentable = reintentable

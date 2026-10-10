@@ -12,9 +12,11 @@ from src.agentes.errores_ia import (
     ErrorFallbackProveedores,
     ErrorSalidaProveedor,
 )
+
 from src.agentes.reintentos import (
     FalloOperacion,
     ejecutar_con_reintentos,
+    es_error_transitorio,
 )
 
 from src.agentes.configuracion_ia import (
@@ -254,6 +256,15 @@ def invocar_modelo_con_fallback(
             fallo_primario
         )
 
+        causa_respaldo = _causa_fallo(
+            error_respaldo
+        )
+
+        reintentable = (
+            es_error_transitorio(causa_primaria)
+            or es_error_transitorio(causa_respaldo)
+        )
+
         traza = {
             "proveedor_primario": nombre_primario,
             "proveedor_usado": nombre_respaldo,
@@ -269,7 +280,8 @@ def invocar_modelo_con_fallback(
         }
 
         raise ErrorFallbackProveedores(
-            traza
+            traza,
+            reintentable=reintentable,
         ) from error_respaldo
 
 

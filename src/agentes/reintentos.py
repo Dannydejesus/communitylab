@@ -58,6 +58,8 @@ def es_error_transitorio(error: BaseException) -> bool:
     """Clasifica errores que justifican repetir una llamada al proveedor."""
     if isinstance(error, ErrorConfiguracionProveedor):
         return False
+    if isinstance(error, ErrorFallbackProveedores):
+        return error.reintentable
     if isinstance(
         error,
         (ErrorSalidaProveedor, OutputParserException),

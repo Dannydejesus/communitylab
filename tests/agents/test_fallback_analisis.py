@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+from src.agentes.recuperacion import ids_reintentables
+
 from src.agentes.errores_ia import ErrorSalidaProveedor
 
 from src.agentes.configuracion_ia import (
@@ -131,3 +133,63 @@ def test_analisis_nvidia_salida_invalida_y_gemini_respalda(
 
     assert resultado.get("errores", []) == []
     assert resultado.get("fallos", []) == []
+
+
+def test_doble_fallo_analisis_transitorio_se_marca_para_recuperacion(
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "COMMUNITYLAB_PROVEEDOR_ANALISIS",
+        PROVEEDOR_NVIDIA_NIM,
+    )
+
+    cadena_nvidia = MagicMock()
+    cadena_nvidia.invoke.side_effect = TimeoutError(
+        "timeout NVIDIA"
+    )
+
+    cadena_gemini = MagicMock()
+    cadena_gemini.invoke.side_effect = ConnectionError(
+        "conexion Gemini"
+    )
+
+    def obtener_cadena(proveedor):
+        if proveedor == PROVEEDOR_NVIDIA_NIM:
+            return cadena_nvidia
+
+        if proveedor == PROVEEDOR_GEMINI:
+            return cadena_gemini
+
+        raise AssertionError(proveedor)
+
+    with patch(
+        "src.agentes.cadenas._obtener_cadena_analisis",
+        side_effect=obtener_cadena,
+    ), patch.object(
+        reintentos,
+        "_esperar",
+    ):
+        resultado = analizar_mensaje(
+            _estado()
+        )
+
+    assert len(resultado["fallos"]) == 1
+
+    fallo = resultado["fallos"][0]
+
+    assert fallo["reintentable"] is True
+    assert fallo["fallback_activado"] is True
+    assert fallo["proveedor_primario"] == PROVEEDOR_NVIDIA_NIM
+    assert fallo["proveedor_respaldo"] == PROVEEDOR_GEMINI
+
+    estado_resultado = {
+        **_estado(),
+        **resultado,
+    }
+
+    assert ids_reintentables(
+        [estado_resultado]
+    ) == ["fallback-001"]
+
+    assert cadena_nvidia.invoke.call_count == 3
+    cadena_gemini.invoke.assert_called_once()
