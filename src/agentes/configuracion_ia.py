@@ -81,7 +81,6 @@ def obtener_proveedor_generacion() -> str:
 
 def obtener_timeout_nvidia() -> float:
     """Obtiene y valida el timeout configurable de NVIDIA NIM."""
-    load_dotenv()
 
     valor = os.getenv(
         VARIABLE_TIMEOUT_NVIDIA,

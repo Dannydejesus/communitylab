@@ -1,0 +1,71 @@
+[
+  {
+    "id": "int-006",
+    "autor": "Ricardo Mena",
+    "texto": "Sería genial tener más talleres prácticos sobre despliegue de modelos en la nube antes del hackathon.",
+    "dilema": "¿Sentimiento es neutral o positivo? ¿Tema es cloud_infraestructura o programa_hackathon?",
+    "evaluacion_nim": {
+      "error": "OpenAITimeoutError"
+    },
+    "evaluacion_gemini": {
+      "sentimiento": "positivo",
+      "tema_principal": "programa_hackathon",
+      "subtema": "talleres de despliegue",
+      "tipo_detectado": "feedback"
+    }
+  },
+  {
+    "id": "int-011",
+    "autor": "Gabriela Núñez",
+    "texto": "El networking que generé en este programa me abrió puertas para colaborar en proyectos open source.",
+    "dilema": "¿Tema es comunidad o empleabilidad? ¿Sentimiento es positivo o muy_positivo?",
+    "evaluacion_nim": {
+      "sentimiento": "muy_positivo",
+      "tema_principal": "empleabilidad",
+      "subtema": "networking",
+      "tipo_detectado": "testimonio"
+    },
+    "evaluacion_gemini": {
+      "sentimiento": "muy_positivo",
+      "tema_principal": "comunidad",
+      "subtema": "networking y colaboración",
+      "tipo_detectado": "testimonio"
+    }
+  },
+  {
+    "id": "int-016",
+    "autor": "Isabel Quiroga",
+    "texto": "Nunca pensé que podría aprender SQL y Python al mismo tiempo, pero la metodología del curso lo hizo posible.",
+    "dilema": "¿Sentimiento es positivo o muy_positivo? ¿Tema es aprendizaje o programacion?",
+    "evaluacion_nim": {
+      "sentimiento": "muy_positivo",
+      "tema_principal": "aprendizaje",
+      "subtema": "SQL Python",
+      "tipo_detectado": "testimonio"
+    },
+    "evaluacion_gemini": {
+      "sentimiento": "muy_positivo",
+      "tema_principal": "aprendizaje",
+      "subtema": "metodologia de estudio",
+      "tipo_detectado": "testimonio"
+    }
+  },
+  {
+    "id": "int-020",
+    "autor": "Lucía Paredes",
+    "texto": "Sugiero agregar más ejercicios prácticos antes de pasar al módulo de estructuras de datos, se siente un salto grande.",
+    "dilema": "¿Sentimiento es negativo o neutral? ¿Sugerencia clasifica como feedback o comentario?",
+    "evaluacion_nim": {
+      "sentimiento": "positivo",
+      "tema_principal": "aprendizaje",
+      "subtema": "programacion",
+      "tipo_detectado": "comentario"
+    },
+    "evaluacion_gemini": {
+      "sentimiento": "neutral",
+      "tema_principal": "aprendizaje",
+      "subtema": "ejercicios prácticos",
+      "tipo_detectado": "feedback"
+    }
+  }
+]
