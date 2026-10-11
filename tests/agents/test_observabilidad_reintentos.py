@@ -121,7 +121,14 @@ def test_agota_intentos_y_deja_traceback_solo_en_log(caplog):
     assert "ConnectionError" in linea["traceback"]
 
 
-def test_generacion_reintenta_solo_la_ruta_transitoria():
+def test_generacion_reintenta_solo_la_ruta_transitoria(
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "COMMUNITYLAB_PROVEEDOR_GENERACION",
+        "gemini",
+    )
+
     generador = MagicMock()
     generador.invoke.side_effect = [
         TimeoutError("timeout"),
@@ -145,7 +152,14 @@ def test_generacion_reintenta_solo_la_ruta_transitoria():
     }
 
 
-def test_fallo_transitorio_agotado_queda_marcado_como_reintentable():
+def test_fallo_transitorio_agotado_queda_marcado_como_reintentable(
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "COMMUNITYLAB_PROVEEDOR_GENERACION",
+        "gemini",
+    )
+
     generador = MagicMock()
     generador.invoke.side_effect = TimeoutError("timeout")
 

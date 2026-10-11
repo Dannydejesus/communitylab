@@ -137,12 +137,10 @@ class EntregaTests(unittest.TestCase):
         self.assertEqual(
             informe["modelo_ia"],
             {
-                "proveedor": "Google Gemini",
-                "identificador_modelo": "gemini-3.5-flash-lite",
-                "max_retries": 2,
-                "solicitudes_por_segundo": 0.2,
-                "intervalo_revision_limitador_segundos": 0.1,
-                "tamano_maximo_limitador": 1,
+                "proveedor": "NVIDIA NIM",
+                "identificador_modelo": "nvidia/nemotron-3.5-lightning-30b-a3b",
+                "base_url": "https://integrate.api.nvidia.com/v1",
+                "max_retries": 0,
             },
         )
         huellas_prompts = informe["prompts_ia"]

@@ -17,7 +17,7 @@ from src.agentes.modelo_ia import (
 from src.agentes.modelos import AnalisisMensaje
 
 
-def test_gemini_es_proveedor_por_defecto(
+def test_nvidia_es_proveedor_analisis_por_defecto(
     monkeypatch,
 ):
     monkeypatch.delenv(
@@ -31,7 +31,7 @@ def test_gemini_es_proveedor_por_defecto(
     ):
         assert (
             obtener_proveedor_analisis()
-            == PROVEEDOR_GEMINI
+            == PROVEEDOR_NVIDIA_NIM
         )
 
 
@@ -50,6 +50,24 @@ def test_puede_seleccionar_nvidia(
         assert (
             obtener_proveedor_analisis()
             == PROVEEDOR_NVIDIA_NIM
+        )
+
+
+def test_puede_seleccionar_gemini_para_analisis(
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "COMMUNITYLAB_PROVEEDOR_ANALISIS",
+        PROVEEDOR_GEMINI,
+    )
+
+    with patch(
+        "src.agentes.configuracion_ia.load_dotenv",
+        return_value=None,
+    ):
+        assert (
+            obtener_proveedor_analisis()
+            == PROVEEDOR_GEMINI
         )
 
 
@@ -107,7 +125,7 @@ def test_fachada_selecciona_gemini():
         AnalisisMensaje
     )
 
-def test_gemini_es_proveedor_generacion_por_defecto(
+def test_nvidia_es_proveedor_generacion_por_defecto(
     monkeypatch,
 ):
     monkeypatch.delenv(
@@ -121,7 +139,7 @@ def test_gemini_es_proveedor_generacion_por_defecto(
     ):
         assert (
             obtener_proveedor_generacion()
-            == PROVEEDOR_GEMINI
+            == PROVEEDOR_NVIDIA_NIM
         )
 
 
@@ -140,6 +158,24 @@ def test_puede_seleccionar_nvidia_para_generacion(
         assert (
             obtener_proveedor_generacion()
             == PROVEEDOR_NVIDIA_NIM
+        )
+
+
+def test_puede_seleccionar_gemini_para_generacion(
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "COMMUNITYLAB_PROVEEDOR_GENERACION",
+        PROVEEDOR_GEMINI,
+    )
+
+    with patch(
+        "src.agentes.configuracion_ia.load_dotenv",
+        return_value=None,
+    ):
+        assert (
+            obtener_proveedor_generacion()
+            == PROVEEDOR_GEMINI
         )
 
 
