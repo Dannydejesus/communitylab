@@ -25,6 +25,11 @@ _id_ejecucion: ContextVar[str | None] = ContextVar("id_ejecucion", default=None)
 _ruta_log: Path | None = None
 _bloqueo_configuracion = threading.Lock()
 
+_contexto_llamada_ia: ContextVar[dict[str, object] | None] = ContextVar(
+    "contexto_llamada_ia",
+    default=None,
+)
+
 
 class FormateadorJson(logging.Formatter):
     """Una línea JSON por evento; el traceback solo se incluye en el log técnico."""
@@ -99,6 +104,40 @@ def contexto_ejecucion(id_ejecucion: str | None = None):
         yield identificador
     finally:
         _id_ejecucion.reset(token)
+
+
+@contextmanager
+def contexto_llamada_ia(
+    *,
+    id_interaccion: str | None = None,
+    ids_interaccion: list[str] | None = None,
+    ruta: str | None = None,
+):
+    """Propaga correlación de una llamada IA sin alterar firmas públicas."""
+    contexto = {}
+
+    if id_interaccion is not None:
+        contexto["id_interaccion"] = id_interaccion
+
+    if ids_interaccion is not None:
+        contexto["ids_interaccion"] = list(ids_interaccion)
+
+    if ruta is not None:
+        contexto["ruta"] = ruta
+
+    token = _contexto_llamada_ia.set(contexto)
+
+    try:
+        yield
+    finally:
+        _contexto_llamada_ia.reset(token)
+
+
+def obtener_contexto_llamada_ia() -> dict[str, object]:
+    """Devuelve una copia segura del contexto de correlación activo."""
+    return dict(
+        _contexto_llamada_ia.get() or {}
+    )
 
 
 def _contexto_desde_metadata(metadata: dict | None) -> dict:

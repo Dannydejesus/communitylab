@@ -1,93 +1,108 @@
-"""Cliente compartido de Gemini con inicialización diferida."""
+"""Fachada de acceso a proveedores de modelos de IA."""
 
-import os
-from functools import lru_cache
+from pydantic import BaseModel
 
-from dotenv import load_dotenv
-from langchain_core.rate_limiters import InMemoryRateLimiter
-from langchain_google_genai import ChatGoogleGenerativeAI
+from src.agentes.fallback_ia import (
+    invocar_modelo_con_fallback,
+)
 
+from src.agentes.errores_ia import (
+    ErrorConfiguracionProveedor,
+    ErrorFallbackProveedores,
+)
 
-MODELO_GEMINI = "gemini-3.5-flash-lite"
-# Bajo a propósito: los reintentos de la aplicación (reintentos.py) se suman a estos.
-MAX_RETRIES_GEMINI = 2
-INTERVALO_REVISION_LIMITADOR = 0.1
-TAMANO_MAXIMO_LIMITADOR = 1
-
-# Límite observado en Gemini Free Tier:
-# 15 requests por minuto para este modelo.
-#
-# Trabajamos a ~12 RPM para dejar margen.
-SOLICITUDES_POR_SEGUNDO = 0.20
-
-
-def obtener_configuracion_modelo() -> dict[str, str | int | float]:
-    """Devuelve los parámetros no secretos usados en las llamadas a Gemini."""
-    return {
-        "proveedor": "Google Gemini",
-        "identificador_modelo": MODELO_GEMINI,
-        "max_retries": MAX_RETRIES_GEMINI,
-        "solicitudes_por_segundo": SOLICITUDES_POR_SEGUNDO,
-        "intervalo_revision_limitador_segundos": INTERVALO_REVISION_LIMITADOR,
-        "tamano_maximo_limitador": TAMANO_MAXIMO_LIMITADOR,
-    }
-
-_rate_limiter = InMemoryRateLimiter(
-    requests_per_second=SOLICITUDES_POR_SEGUNDO,
-    check_every_n_seconds=INTERVALO_REVISION_LIMITADOR,
-    max_bucket_size=TAMANO_MAXIMO_LIMITADOR,
+from src.agentes.configuracion_ia import (
+    PROVEEDOR_GEMINI,
+    PROVEEDOR_NVIDIA_NIM,
+    obtener_proveedor_analisis,
+)
+from src.agentes.proveedores.gemini import (
+    INTERVALO_REVISION_LIMITADOR,
+    MAX_RETRIES_GEMINI,
+    MODELO_GEMINI,
+    SOLICITUDES_POR_SEGUNDO,
+    TAMANO_MAXIMO_LIMITADOR,
+    obtener_configuracion_modelo as obtener_configuracion_gemini,
+    obtener_modelo_gemini,
+    obtener_modelo_gemini_estructurado,
+)
+from src.agentes.proveedores.nvidia_nim import (
+    obtener_configuracion_nvidia,
+    obtener_modelo_nvidia,
+    obtener_modelo_nvidia_estructurado,
 )
 
 
-@lru_cache(maxsize=1)
-def obtener_modelo_gemini():
-    """
-    Carga las credenciales y crea el cliente del LLM según la prioridad:
-    1. NVIDIA NIM (Nemotron) como motor principal.
-    2. Cohere (Command-R) como respaldo activo.
-    3. Gemini como proveedor alternativo.
-    """
-    load_dotenv()
+def obtener_configuracion_modelo() -> dict:
+    """Devuelve la configuración no secreta del proveedor de análisis activo."""
+    proveedor = obtener_proveedor_analisis()
 
-    nvidia_key = os.getenv("NVIDIA_API_KEY")
-    cohere_key = os.getenv("COHERE_API_KEY")
-    gemini_key = os.getenv("GEMINI_API_KEY")
+    if proveedor == PROVEEDOR_NVIDIA_NIM:
+        return obtener_configuracion_nvidia()
 
-    # 1. Prioridad: NVIDIA NIM (Nemotron)
-    if nvidia_key:
-        try:
-            from langchain_openai import ChatOpenAI
-            return ChatOpenAI(
-                base_url="https://integrate.api.nvidia.com/v1",
-                api_key=nvidia_key,
-                model="nvidia/nemotron-3.5-lightning-30b-a3b",
-                temperature=0.1,
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
-            )
-        except Exception:
-            pass
+    return obtener_configuracion_gemini()
 
-    # 2. Respaldo (Fallback): Cohere
-    if cohere_key:
-        try:
-            from langchain_cohere import ChatCohere
-            return ChatCohere(
-                model="command-r-08-2024",
-                cohere_api_key=cohere_key,
-                temperature=0.1,
-            )
-        except Exception:
-            pass
 
-    # 3. Gemini si está disponible
-    if gemini_key:
-        return ChatGoogleGenerativeAI(
-            api_key=gemini_key,
-            model=MODELO_GEMINI,
-            rate_limiter=_rate_limiter,
-            max_retries=MAX_RETRIES_GEMINI,
+def obtener_modelo_analisis_estructurado(
+    esquema: type[BaseModel],
+    *,
+    proveedor: str | None = None,
+):
+    """Obtiene el modelo estructurado utilizado para análisis."""
+    proveedor_activo = (
+        proveedor
+        if proveedor is not None
+        else obtener_proveedor_analisis()
+    )
+
+    return _obtener_modelo_estructurado(
+        esquema,
+        proveedor=proveedor_activo,
+    )
+
+def _obtener_modelo_estructurado(
+    esquema: type[BaseModel],
+    *,
+    proveedor: str,
+):
+    """Obtiene un modelo estructurado del proveedor indicado."""
+    if proveedor == PROVEEDOR_GEMINI:
+        return obtener_modelo_gemini_estructurado(
+            esquema
+        )
+
+    if proveedor == PROVEEDOR_NVIDIA_NIM:
+        return obtener_modelo_nvidia_estructurado(
+            esquema
         )
 
     raise ValueError(
-        "No se encontró NVIDIA_API_KEY, COHERE_API_KEY ni GEMINI_API_KEY en el archivo .env."
+        f"Proveedor de IA no soportado: {proveedor}"
     )
+
+def obtener_modelo_generacion_estructurado(
+    esquema: type[BaseModel],
+    *,
+    proveedor: str,
+):
+    """Obtiene el modelo estructurado utilizado por los generadores."""
+    return _obtener_modelo_estructurado(
+        esquema,
+        proveedor=proveedor,
+    )
+
+
+__all__ = [
+    "INTERVALO_REVISION_LIMITADOR",
+    "MAX_RETRIES_GEMINI",
+    "MODELO_GEMINI",
+    "SOLICITUDES_POR_SEGUNDO",
+    "TAMANO_MAXIMO_LIMITADOR",
+    "obtener_configuracion_modelo",
+    "obtener_modelo_analisis_estructurado",
+    "obtener_modelo_gemini",
+    "obtener_modelo_nvidia",
+    "ErrorConfiguracionProveedor",
+    "ErrorFallbackProveedores",
+    "invocar_modelo_con_fallback",
+]
