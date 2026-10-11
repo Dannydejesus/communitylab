@@ -50,8 +50,6 @@ class AnalisisMensaje(BaseModel):
             "Detalle breve y específico del tema principal, "
             "preferentemente entre 1 y 5 palabras."
         ),
-        min_length=1,
-        max_length=80,
     )
 
     tipo_detectado: TipoInteraccion = Field(

@@ -40,27 +40,54 @@ _rate_limiter = InMemoryRateLimiter(
 
 
 @lru_cache(maxsize=1)
-def obtener_modelo_gemini() -> ChatGoogleGenerativeAI:
+def obtener_modelo_gemini():
     """
-    Carga las credenciales y crea un único cliente compartido.
-
-    El rate limiter evita ráfagas de solicitudes que puedan superar
-    el límite de Gemini. max_retries permite recuperar llamadas
-    transitorias que fallen por rate limit o disponibilidad.
+    Carga las credenciales y crea el cliente del LLM según la prioridad:
+    1. NVIDIA NIM (Nemotron) como motor principal.
+    2. Cohere (Command-R) como respaldo activo.
+    3. Gemini como proveedor alternativo.
     """
     load_dotenv()
 
-    api_key = os.getenv("GEMINI_API_KEY")
+    nvidia_key = os.getenv("NVIDIA_API_KEY")
+    cohere_key = os.getenv("COHERE_API_KEY")
+    gemini_key = os.getenv("GEMINI_API_KEY")
 
-    if not api_key:
-        raise ValueError(
-            "No se encontró GEMINI_API_KEY. "
-            "Verifica que exista en el archivo .env."
+    # 1. Prioridad: NVIDIA NIM (Nemotron)
+    if nvidia_key:
+        try:
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI(
+                base_url="https://integrate.api.nvidia.com/v1",
+                api_key=nvidia_key,
+                model="nvidia/nemotron-3.5-lightning-30b-a3b",
+                temperature=0.1,
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+            )
+        except Exception:
+            pass
+
+    # 2. Respaldo (Fallback): Cohere
+    if cohere_key:
+        try:
+            from langchain_cohere import ChatCohere
+            return ChatCohere(
+                model="command-r-08-2024",
+                cohere_api_key=cohere_key,
+                temperature=0.1,
+            )
+        except Exception:
+            pass
+
+    # 3. Gemini si está disponible
+    if gemini_key:
+        return ChatGoogleGenerativeAI(
+            api_key=gemini_key,
+            model=MODELO_GEMINI,
+            rate_limiter=_rate_limiter,
+            max_retries=MAX_RETRIES_GEMINI,
         )
 
-    return ChatGoogleGenerativeAI(
-        api_key=api_key,
-        model=MODELO_GEMINI,
-        rate_limiter=_rate_limiter,
-        max_retries=MAX_RETRIES_GEMINI,
+    raise ValueError(
+        "No se encontró NVIDIA_API_KEY, COHERE_API_KEY ni GEMINI_API_KEY en el archivo .env."
     )
