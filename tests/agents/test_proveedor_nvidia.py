@@ -73,6 +73,9 @@ def test_construye_cliente_nvidia_sin_realizar_llamada(monkeypatch):
         nvidia_nim,
         "load_dotenv",
         return_value=None,
+    ), patch(
+        "src.agentes.configuracion_ia.load_dotenv",
+        return_value=None,
     ), patch.object(
         nvidia_nim,
         "ChatOpenAI",
