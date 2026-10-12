@@ -689,3 +689,37 @@ Antes de declarar la rama lista:
 [ ] live ejecutado solo si corresponde
 [ ] sin claves ni secretos en commits/logs compartidos
 ```
+## 19. Resultado de la evaluación comparativa de proveedores
+
+La rama `feature/DS-Semana3-Nvidia` mantiene NVIDIA NIM como proveedor
+primario por defecto porque su propósito es experimental.
+
+Sin embargo, la evaluación semántica final realizada con un holdout congelado
+de 30 casos favoreció a Gemini.
+
+Resultados por moda de 3 corridas:
+
+| Dimensión | NVIDIA NIM / Nemotron | Gemini |
+| --- | ---: | ---: |
+| Sentimiento | 66.7% | 86.7% |
+| Tema principal | 86.7% | 96.7% |
+| Tipo detectado | 86.7% | 90.0% |
+| Triple correcto | 56.7% | 76.7% |
+
+El holdout fue etiquetado antes de ejecutar ambos proveedores y su SHA-256 es:
+
+La conclusión de esta prueba no cambia automáticamente la configuración de
+esta rama experimental.
+Estado actual:
+feature/DS-Semana3-Nvidia:
+NVIDIA NIM -> primario
+Gemini     -> fallback
+
+Propuesta para discutir antes de integrar a la línea estable:
+Gemini      -> primario
+NVIDIA NIM  -> posible respaldo
+
+La inversión del fallback Gemini -> NVIDIA NIM todavía no está implementada
+y requeriría cambios y pruebas específicas.
+La evaluación completa está documentada en:
+docs/evaluacion_proveedores_semana3.md
