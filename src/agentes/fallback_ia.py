@@ -77,9 +77,13 @@ def _motivo_seguro_fallback(
     if codigo in {500, 502, 503, 504}:
         return f"http_{codigo}"
 
-    # NVIDIA NIM a veces responde 400 cuando un modelo/función entra en estado DEGRADED en su infraestructura
-    if codigo == 400 and "DEGRADED" in str(causa):
-        return "servicio_degradado"
+    if codigo == 400:
+        detalle = getattr(causa, "body", None)
+        texto_error = str(
+            detalle if detalle is not None else causa
+        ).upper()
+        if "DEGRADED" in texto_error and "FUNCTION" in texto_error:
+            return "servicio_degradado"
 
     nombres_clases = {
         clase.__name__
