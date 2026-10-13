@@ -20,7 +20,6 @@ def _entrada_analisis(estado: EstadoAgente) -> dict:
         "origen": estado.get("origen", ""),
         "canal": estado.get("canal", ""),
         "idioma": estado.get("idioma", "es"),
-        "tipo_original": estado.get("tipo_original", ""),
         "texto": estado["texto"],
     }
 

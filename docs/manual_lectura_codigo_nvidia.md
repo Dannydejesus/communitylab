@@ -913,3 +913,35 @@ evidencia.
 - `src/agentes/proveedores/nvidia_nim.py`: adaptador NIM.
 - `tests/agents/`: garantías offline.
 - `tests/integracion/`: recorridos live explícitos.
+
+## 26. Decisión posterior a la evaluación semántica
+
+La integración de NVIDIA NIM quedó validada técnicamente, pero la evaluación
+comparativa final no aporta evidencia suficiente para sustituir a Gemini como
+proveedor principal de la línea estable.
+
+Sobre un holdout congelado de 30 mensajes y tres corridas por proveedor,
+Gemini obtuvo mejores resultados en las tres dimensiones evaluadas y en el
+criterio conjunto.
+
+Esto no modifica el objetivo de esta rama:
+
+```text
+feature/DS-Semana3-Nvidia
+NVIDIA NIM = proveedor primario experimental
+Gemini     = respaldo implementado
+
+La recomendación que queda para revisión del equipo es mantener Gemini como
+primario de la línea estable y estudiar NVIDIA NIM / Nemotron como posible
+respaldo.
+Importante:
+- NVIDIA -> Gemini es el fallback actualmente implementado.
+- Gemini -> NVIDIA es únicamente una propuesta futura.
+- No deben confundirse los resultados semánticos con pruebas de retry,
+  fallback o recuperación.
+- El holdout final no evaluó comparativamente la calidad de generación de
+  boletines, FAQ, LinkedIn, casos de éxito o insights.
+Ver:
+docs/evaluacion_proveedores_semana3.md
+docs/evidencia_holdout_proveedores_semana3.json
+tests/fixtures/holdout_final_analisis_semana3.json
